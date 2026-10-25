@@ -1,0 +1,26 @@
+[advisories]
+version = 2
+ignore = [
+    { id = "RUSTSEC-2024-0436", reason = "Unmaintained paste is required by iced/wgpu and aws-lc; no compatible upstream replacement. Review with iced upgrades." },
+    { id = "RUSTSEC-2026-0192", reason = "Unmaintained ttf-parser is required by iced's fontdb/owned_ttf_parser stack. Review with iced upgrades." },
+    { id = "RUSTSEC-2026-0370", reason = "zvariant 5 is required by the pinned desktop zbus 5 ecosystem; migration is upstream to zbus 6." },
+    { id = "RUSTSEC-2026-0371", reason = "zbus_names 4 is required by the pinned desktop zbus 5 ecosystem; migration is upstream to zbus 6." },
+    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive 5 is required by zvariant 5; migration is upstream to zbus 6." },
+]
+
+[licenses]
+version = 2
+allow = [
+    "MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Zlib",
+    "Unicode-3.0", "CC0-1.0", "MPL-2.0", "BSL-1.0", "Unlicense",
+    "CDLA-Permissive-2.0", # TLS root-certificate data
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+deny = [{ name = "apca", reason = "GPL is incompatible with this project's dependency policy" }]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

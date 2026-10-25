@@ -1,0 +1,151 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+# trade-rl builds against trade-db from source (`tradedb = { path = "../trade-db" }`),
+# so every job checks out both repositories side by side.
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    defaults:
+      run:
+        working-directory: trade-rl
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: trade-rl
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: ZacWalk/trade-db
+          path: trade-db
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libwayland-dev pkg-config
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: trade-rl
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked
+      - name: Viewer renders headless
+        shell: bash
+        run: |
+          cargo run --locked -q -p trl-cli -- synth --db ci/bars.tradedb --kind trend --bars 16000
+          cargo run --locked -q -p trl-app -- --db ci/bars.tradedb --render ci/chart.png --size 800x500
+          test -s ci/chart.png
+
+  reproducible:
+    name: reproducible across platforms
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    defaults:
+      run:
+        working-directory: trade-rl
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: trade-rl
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: ZacWalk/trade-db
+          path: trade-db
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: trade-rl
+      - name: Walk a synthetic series with every learner
+        run: |
+          cargo build --release --locked -p trl-cli
+          trl=target/release/trl
+          $trl synth --db ci/bars.tradedb --kind walk --bars 30000 --seed 3
+          for agent in dqn qtable random; do
+            # Exit 1 (a failed control) is a result; only 2 is an error.
+            $trl walk --db ci/bars.tradedb --agent $agent --seeds 2 --train 8000 --test 3000 --gap 500 \
+              --episode 2000 --epochs 1 --hidden 16,16 --batch 16 --target-sync 500 --seed 5 \
+              --out ci/runs-$agent > /dev/null || [ $? -eq 1 ]
+          done
+          # Run directories are named by start time, so key artifacts by agent and file.
+          for d in ci/runs-*/*/; do
+            agent=$(basename "$(dirname "$d")")
+            for f in $(ls "$d" | grep -v manifest.txt | sort); do
+              echo "$(cksum < "$d$f") $agent/$f"
+            done
+          done > ci/artifacts.txt
+          cat ci/artifacts.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-${{ matrix.os }}
+          path: trade-rl/ci/artifacts.txt
+
+  compare:
+    name: artifacts byte-identical
+    needs: reproducible
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+      - run: |
+          diff artifacts-ubuntu-latest/artifacts.txt artifacts-windows-latest/artifacts.txt
+          diff artifacts-ubuntu-latest/artifacts.txt artifacts-macos-latest/artifacts.txt
+
+  msrv:
+    name: msrv (1.88)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: trade-rl
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: trade-rl
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: ZacWalk/trade-db
+          path: trade-db
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@1.88
+      - run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libwayland-dev pkg-config
+      # rust-toolchain.toml would otherwise override the toolchain to stable.
+      - run: cargo test --workspace --locked
+        env:
+          RUSTUP_TOOLCHAIN: "1.88"
+
+  dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: trade-rl
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: ZacWalk/trade-db
+          path: trade-db
+          persist-credentials: false
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: trade-rl/Cargo.toml

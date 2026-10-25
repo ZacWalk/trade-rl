@@ -1,0 +1,25 @@
+[package]
+name = "trl-app"
+description = "trade-rl viewer: bars, positions and equity from the bar database and a run. Read-only."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "trade-rl"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+iced.workspace = true
+trl-core.workspace = true
+tiny-skia.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

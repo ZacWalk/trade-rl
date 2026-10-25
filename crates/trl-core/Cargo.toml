@@ -1,0 +1,20 @@
+[package]
+name = "trl-core"
+description = "trade-rl research engine: bars stored in tradedb, causal features, agents and walk-forward experiments"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+libm.workspace = true
+tradedb.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

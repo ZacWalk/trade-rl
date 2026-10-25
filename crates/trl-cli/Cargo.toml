@@ -1,0 +1,25 @@
+[package]
+name = "trl-cli"
+description = "trl: the trade-rl command line — acquisition, import, experiments and reports"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "trl"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+trl-binance.workspace = true
+trl-core.workspace = true
+
+[dev-dependencies]
+sha2.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

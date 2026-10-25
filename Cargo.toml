@@ -1,0 +1,41 @@
+[workspace]
+members = ["crates/trl-core", "crates/trl-binance", "crates/trl-cli", "crates/trl-app"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT"
+repository = "https://github.com/ZacWalk/trade-rl"
+
+[workspace.dependencies]
+trl-core = { version = "0.1.0", path = "crates/trl-core" }
+trl-binance = { version = "0.1.0", path = "crates/trl-binance" }
+tradedb = { version = "0.1.0", path = "../trade-db" }
+clap = { version = "4", features = ["derive"] }
+iced = { version = "=0.14.0", features = ["canvas", "image-without-codecs"] }
+libm = "0.2"
+miniz_oxide = "0.8"
+sha2 = "0.10"
+tempfile = "3"
+thiserror = "2"
+tiny-skia = "0.11"
+ureq = { version = "3", default-features = false, features = ["rustls"] }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+all = "warn"
+
+[profile.dev]
+debug = 1
+
+# Training is numeric work; unoptimised it is slow enough to make tests a chore.
+[profile.test]
+opt-level = 2
+
+[profile.release]
+lto = "thin"
+strip = "debuginfo"
